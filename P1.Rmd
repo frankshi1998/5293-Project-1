@@ -1,0 +1,371 @@
+---
+title: "R Notebook"
+output: html_note0ook
+---
+
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE) 
+```
+
+
+Question: 
+Today's worlld,capitalism is wellknow since most of the countirs ruled bycapitalis. However, it is worthy to understand the ideas behinds communism too. In order to understand communism, what aspect should we pay more attention to? In other words. We do not have time to read all 3 books. but through which key words can help shape the basic understandng of communism.(seperate by boo? why" length different)
+
+
+where does the sentiments come from.
+
+<center> <h2> #The Breif Introduction on 'Capitalism' and 'Communism'</h2> </center>
+<br><br>
+
+### Capitalism is defined as an economic system in which a country’s trade, industry, and profits are controlled only by private companies. The United States and most of the nations around the world are capitalist countries, but capitalism is not the only economic system available. Communism, on the other hand, advocating that goods are owned in common and are available to all as needed, means of production are owned communally.
+
+
+*** 
+> ## block quote 
+
+
+
+
+```{r}
+library(RColorBrewer)
+library(tm)
+library(wordcloud)
+library(NLP)
+library(tidyverse)
+library(syuzhet)
+```
+
+
+
+
+##### Seperate datasets into: capitalism, communism, Communist_Manifesto, lenin, Capital
+
+```{r}
+docs =  read.csv("philosophy_data.csv",stringsAsFactors =  F) 
+
+capitalism  =
+  docs %>% filter(school  == "capitalism")
+communism  =
+  docs %>% filter(school  == "communism")
+Communist_Manifesto  =
+  docs %>% filter(title  == "The Communist Manifesto")
+lenin  =
+  docs %>% filter(title  == "Essential Works Of Lenin")
+Capital  =
+  docs %>% filter(title  == "Capital")
+
+```
+
+## See results overall from the entire dataset
+```{r}
+
+## data preprocessing
+
+words = Corpus(VectorSource(docs$lemmatized_str))
+words = tm_map(words, removeNumbers)
+words = tm_map(words, removePunctuation)
+words = tm_map(words, removeWords, c("the", "and", "PRON", stopwords("english"))) # Remove PRON 
+words =  tm_map(words, stripWhitespace)
+
+### Document matirx
+
+
+words_dtm <- DocumentTermMatrix(words)
+findFreqTerms(words_dtm, lowfreq = 10)
+
+
+findFreqTerms(words_dtm, 50)
+
+## wordcloud
+freq = data.frame(sort(colSums(as.matrix(words_dtm)), decreasing=TRUE))
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"))
+
+```
+
+# See Results from Captilism
+
+```{r}
+################################################ Capitalism ############################################################
+
+## data preprocessing
+words = Corpus(VectorSource(capitalism$lemmatized_str))
+words = tm_map(words, removeNumbers)
+words = tm_map(words, removePunctuation)
+words = tm_map(words, removeWords, c("the", "and", "PRON", stopwords("english"))) # Remove PRON 
+words = tm_map(words, removeWords, c("must", "however", "two", "one", "upon", "much", "every", "either", "must", "can","may","therefore","will", "good","great", stopwords("english")))
+words =  tm_map(words, stripWhitespace)
+
+### Document matrix1
+words_dtm <- DocumentTermMatrix(words)
+### Document matrix2
+words_dtm_tfidf <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
+words_dtm_tfidf = removeSparseTerms(words_dtm_tfidf, 0.95)
+inspect(words_dtm_tfidf[1,1:20])
+
+
+## creating freq data frame
+freq = data.frame(sort(colSums(as.matrix(words_dtm)), decreasing=TRUE))
+table = data.frame(term = row.names(freq), frequency= freq)
+colnames(table) = c('term', 'frequency')
+
+# Bar chart
+p<-ggplot(data= subset(table, frequency >1000), aes(x=reorder(term, -frequency), y=frequency)) +
+  geom_bar(stat="identity", fill="orange")+ theme(axis.text.x = element_text(angle = 45,hjust=1) )
+p
+
+
+## First word cloud
+
+
+layout(matrix(c(1, 2), nrow=2), heights=c(1, 4))
+par(mar=rep(0, 4))
+plot.new()
+text(x=0.5, y=0.5, "WordCloud 1", col = "#1b98e0", cex = 2)
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+plot.new()
+text(x=0.5, y=0.5, "WordCloud 2", col = "#1b98e0", cex = 2)
+### Second Word Cloud
+freq = data.frame(sort(colSums(as.matrix(words_dtm_tfidf)), decreasing=TRUE))
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+
+```
+
+```{r}
+
+## sentiments score for capitalism
+capitalism.sent <- iconv(capitalism$lemmatized_str)
+s <- get_nrc_sentiment(capitalism.sent)
+head(s)
+
+barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores (capitalism)')
+
+
+
+```
+<br><br><br><br>
+
+***
+## See Overall Results from Communism
+```{r}
+################################################ Communism Overall ############################################################
+
+## data preprocessing
+words = Corpus(VectorSource(communism$lemmatized_str))
+words = tm_map(words, removeNumbers)
+words = tm_map(words, removePunctuation)
+words = tm_map(words, removeWords, c("the", "and", "PRON", stopwords("english"))) # Remove PRON 
+words = tm_map(words, removeWords, c("must", "however", "two", "one", "upon", "much", "every", "either", "must", "can","may","therefore","will", "good","great", stopwords("english")))
+words =  tm_map(words, stripWhitespace)
+
+### Document matirx1
+words_dtm <- DocumentTermMatrix(words)
+### Document matirx2
+words_dtm_tfidf <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
+words_dtm_tfidf = removeSparseTerms(words_dtm_tfidf, 0.95)
+
+
+
+## creating freq data frame
+freq.communism = data.frame(sort(colSums(as.matrix(words_dtm)), decreasing=TRUE))
+table = data.frame(term = row.names(freq.communism), frequency= freq.communism)
+colnames(table) = c('term', 'frequency')
+
+# Bar chart
+communism_chart<-ggplot(data= subset(table, frequency >800), aes(x=reorder(term, -frequency), y=frequency)) +
+  geom_bar(stat="identity", fill="orange")+ theme(axis.text.x = element_text(angle = 45,hjust=1) )
+communism_chart
+
+
+## First word cloud
+
+layout(matrix(c(1, 2), nrow=2), heights=c(1, 4))
+par(mar=rep(0, 4))
+plot.new()
+text(x=0.5, y=0.5, "WordCloud 1", col = "#1b98e0", cex = 2)
+wordcloud(rownames(freq.communism), freq.communism[,1], max.words=50, colors=brewer.pal(1, "Dark2"))
+
+### Second Word Cloud
+
+layout(matrix(c(1, 2), nrow=2), heights=c(1, 4))
+par(mar=rep(0, 4))
+plot.new()
+text(x=0.5, y=0.5, "WordCloud 2", col = "#1b98e0", cex = 2)
+freq.communism = data.frame(sort(colSums(as.matrix(words_dtm_tfidf)), decreasing=TRUE))
+wordcloud(rownames(freq.communism), freq.communism[,1], max.words=50, colors=brewer.pal(1, "Dark2"))
+
+
+```
+
+#### Serveral key words from School of Commuism, such as labour, production, capitalist, labourer. The following is the commuist veiws on those words:
+
+* ####  labourer.:
+* ####  capitalist:
+* ####  Production
+
+
+#### However, in order to better understand frequency of key words, we need to split it into 3 subsets. There are 3 books introduced under communism: Communist_Manifesto, Capital, and Essential Works Of Lenin 
+
+```{r}
+################################################ Communism sentiment ############################################################
+## sentiments score for communism
+communism.score <- iconv(capitalism$lemmatized_str)
+s <- get_nrc_sentiment(communism.score)
+head(s)
+
+communism.sent = barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores (communism.sent)')
+
+communism.sent
+
+```
+
+
+<br><br><br><br>
+### See Overall Results from Communism Mannifest
+```{r}
+################################################   Communist_Manifesto ############################################################
+
+## data preprocessing
+words = Corpus(VectorSource(Communist_Manifesto$lemmatized_str))
+words = tm_map(words, removeNumbers)
+words = tm_map(words, removePunctuation)
+words = tm_map(words, removeWords, c("the", "and", "PRON", stopwords("english"))) # Remove PRON 
+words = tm_map(words, removeWords, c("must", "however", "two", "one", "upon", "much", "every", "either", "must", "can","may","therefore","will", "good","great", stopwords("english")))
+words = tm_map(words, removeWords, c("even", "always", "whole", stopwords("english"))) 
+words =  tm_map(words, stripWhitespace)
+
+### Document matirx1
+words_dtm <- DocumentTermMatrix(words)
+### Document matirx2
+words_dtm_tfidf <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
+words_dtm_tfidf = removeSparseTerms(words_dtm_tfidf, 0.95)
+
+
+
+## creating freq data frame
+freq = data.frame(sort(colSums(as.matrix(words_dtm)), decreasing=TRUE))
+table = data.frame(term = row.names(freq), frequency= freq)
+colnames(table) = c('term', 'frequency')
+
+# Bar chart
+communism_chart<-ggplot(data= subset(table, frequency >30), aes(x=reorder(term, -frequency), y=frequency)) +
+  geom_bar(stat="identity", fill="orange")+ theme(axis.text.x = element_text(angle = 45,hjust=1) ) + labs(x = "term")
+communism_chart
+
+
+## First word cloud
+#par(mfrow=c(1,2))
+ wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+### Second Word Cloud
+freq = data.frame(sort(colSums(as.matrix(words_dtm_tfidf)), decreasing=TRUE))
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+
+```
+
+### class, Bourgeois, Protetariant
+
+
+```{r}
+################################################   Communist_Manifesto sentiments ############################################################
+## sentiments score for communism
+communism.score <- iconv(capitalism$lemmatized_str)
+s <- get_nrc_sentiment(communism.score)
+head(s)
+
+communism.sent = barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores (communism.sent)')
+
+communism.sent
+
+```
+
+
+## See Overall Results from Communism : Essential Works Of Lenin 
+```{r}
+################################################   Communism: Essential Works Of Lenin ############################################################
+
+## data processing
+words = Corpus(VectorSource(Lenin$lemmatized_str))
+words = tm_map(words, removeNumbers)
+words = tm_map(words, removePunctuation)
+words = tm_map(words, removeWords, c("the", "and", "PRON", stopwords("english"))) # Remove PRON 
+words = tm_map(words, removeWords, c("must", "however", "two", "one", "upon", "much", "every", "either", "must", "can","may","therefore","will", "good","great", stopwords("english")))
+words =  tm_map(words, stripWhitespace)
+
+### Document matrix1
+words_dtm <- DocumentTermMatrix(words)
+### Document matrix2
+words_dtm_tfidf <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
+words_dtm_tfidf = removeSparseTerms(words_dtm_tfidf, 0.95)
+inspect(words_dtm_tfidf[1,1:20])
+
+
+## creating freq data frame
+freq = data.frame(sort(colSums(as.matrix(words_dtm)), decreasing=TRUE))
+table = data.frame(term = row.names(freq), frequency= freq)
+colnames(table) = c('term', 'frequency')
+
+# Bar chart
+communism_chart<-ggplot(data= subset(table, frequency >1000), aes(x=reorder(term, -frequency), y=frequency)) +
+  geom_bar(stat="identity", fill="orange")+ theme(axis.text.x = element_text(angle = 45,hjust=1) )
+communism_chart
+
+
+## First word cloud
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+### Second Word Cloud
+freq = data.frame(sort(colSums(as.matrix(words_dtm_tfidf)), decreasing=TRUE))
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(1, "Dark2"), scale=c(3,0.25))
+
+
+```
+
+```{r}
+################################################   Communism: Essential Works Of Lenin ############################################################
+## sentiments score for communism
+Lenin.score <- iconv(Lenin$lemmatized_str)
+s <- get_nrc_sentiment(Lenin.score)
+head(s)
+
+Lenin.score.sent = barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores (Lenin.score.sent)')
+
+Lenin.score.sent
+
+```
+
+
+
+
+
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+- This is my first conclusion..
+
+
+</div>
+
+
